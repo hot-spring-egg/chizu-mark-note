@@ -113,112 +113,115 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // --- 外部画像を使わず、すべてSVGコードで緻密に描画された地図記号データ ---
+    // --- 国土地理院の形状に基づき精密に描画し直した地図記号データ ---
     const CATEGORIES = ['役所・安全・くらし', '文化・産業', 'しぜん・土地'];
 
     const SYMBOL_DATA = [
       // 【役所・安全・くらし】
       { id: 1, category: '役所・安全・くらし', name: '市役所', kana: 'しやくしょ', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <circle cx="50" cy="50" r="32" fill="none" stroke="currentColor" strokeWidth="8"/>
+          <circle cx="50" cy="50" r="32" fill="none" stroke="currentColor" strokeWidth="10"/>
           <circle cx="50" cy="50" r="14" fill="currentColor"/>
         </svg>
       )},
       { id: 2, category: '役所・安全・くらし', name: '町村役場', kana: 'ちょうそんやくば', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" strokeWidth="8"/>
+          <circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" strokeWidth="10"/>
         </svg>
       )},
       { id: 3, category: '役所・安全・くらし', name: '交番', kana: 'こうばん', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <path d="M 25 25 L 75 75 M 75 25 L 25 75" stroke="currentColor" strokeWidth="12" strokeLinecap="round"/>
+          <path d="M 20 20 L 80 80 M 80 20 L 20 80" stroke="currentColor" strokeWidth="14" strokeLinecap="round"/>
         </svg>
       )},
       { id: 4, category: '役所・安全・くらし', name: '警察署', kana: 'けいさつしょ', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="8"/>
-          <path d="M 30 30 L 70 70 M 70 30 L 30 70" stroke="currentColor" strokeWidth="8" strokeLinecap="round"/>
+          <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="10"/>
+          <path d="M 25 25 L 75 75 M 75 25 L 25 75" stroke="currentColor" strokeWidth="10" strokeLinecap="round"/>
         </svg>
       )},
       { id: 5, category: '役所・安全・くらし', name: '消防署', kana: 'しょうぼうしょ', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <path d="M 50 35 L 50 85 M 25 20 L 50 35 L 75 20" stroke="currentColor" strokeWidth="12" strokeLinecap="round" fill="none" strokeLinejoin="round"/>
+          <path d="M 50 40 L 50 85 M 20 15 L 50 40 L 80 15" stroke="currentColor" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
         </svg>
       )},
       { id: 6, category: '役所・安全・くらし', name: '郵便局', kana: 'ゆうびんきょく', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <path d="M 20 30 L 80 30 M 50 30 L 50 85 M 25 55 L 75 55" stroke="currentColor" strokeWidth="10" strokeLinecap="round"/>
+          <path d="M 15 30 L 85 30 M 50 30 L 50 90 M 25 55 L 75 55" stroke="currentColor" strokeWidth="12" strokeLinecap="round"/>
         </svg>
       )},
 
       // 【文化・産業】
       { id: 7, category: '文化・産業', name: '小・中学校', kana: 'しょう・ちゅうがっこう', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <path d="M 20 35 L 80 35 M 50 15 L 50 35 M 40 35 L 15 85 M 60 35 L 85 85" stroke="currentColor" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round"/>
+          <path d="M 20 35 L 80 35 M 50 15 L 50 35 M 40 35 L 15 85 M 60 35 L 85 85" stroke="currentColor" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round"/>
         </svg>
       )},
       { id: 8, category: '文化・産業', name: '病院', kana: 'びょういん', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <path d="M 20 15 L 80 15 L 80 60 C 80 85, 50 95, 50 95 C 50 95, 20 85, 20 60 Z" fill="none" stroke="currentColor" strokeWidth="8" strokeLinejoin="round"/>
-          <path d="M 50 35 L 50 65 M 35 50 L 65 50" stroke="currentColor" strokeWidth="8" strokeLinecap="round"/>
+          {/* 正しい五角形（ホームベース型） */}
+          <path d="M 20 15 L 80 15 L 80 60 L 50 90 L 20 60 Z" fill="none" stroke="currentColor" strokeWidth="10" strokeLinejoin="round"/>
+          <path d="M 50 35 L 50 65 M 35 50 L 65 50" stroke="currentColor" strokeWidth="10" strokeLinecap="round"/>
         </svg>
       )},
       { id: 9, category: '文化・産業', name: '神社', kana: 'じんじゃ', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <path d="M 15 30 L 85 30 M 15 50 L 85 50 M 25 30 L 25 85 M 75 30 L 75 85 M 50 50 L 50 85 M 50 20 L 50 30" stroke="currentColor" strokeWidth="8" strokeLinecap="round"/>
+          <path d="M 15 30 L 85 30 M 15 50 L 85 50 M 25 30 L 25 85 M 75 30 L 75 85 M 50 50 L 50 85 M 50 20 L 50 30" stroke="currentColor" strokeWidth="10" strokeLinecap="round"/>
         </svg>
       )},
       { id: 10, category: '文化・産業', name: '寺院', kana: 'じいん', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <path d="M 50 15 L 50 85 M 15 50 L 85 50 M 15 15 L 50 15 M 85 85 L 50 85 M 85 15 L 85 50 M 15 85 L 15 50" stroke="currentColor" strokeWidth="8" strokeLinecap="round" fill="none"/>
+          <path d="M 50 15 L 50 85 M 15 50 L 85 50 M 15 15 L 50 15 M 85 85 L 50 85 M 85 15 L 85 50 M 15 85 L 15 50" stroke="currentColor" strokeWidth="10" strokeLinecap="round" fill="none"/>
         </svg>
       )},
       { id: 11, category: '文化・産業', name: '工場', kana: 'こうじょう', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" strokeWidth="8"/>
-          <path d="M 50 10 L 50 25 M 50 75 L 50 90 M 10 50 L 25 50 M 75 50 L 90 50 M 22 22 L 32 32 M 78 78 L 68 68 M 22 78 L 32 68 M 78 22 L 68 32" stroke="currentColor" strokeWidth="8" strokeLinecap="round"/>
+          {/* 歯車の形 */}
+          <circle cx="50" cy="50" r="18" fill="none" stroke="currentColor" strokeWidth="10"/>
+          <path d="M 50 10 L 50 25 M 50 75 L 50 90 M 10 50 L 25 50 M 75 50 L 90 50 M 22 22 L 32 32 M 78 78 L 68 68 M 22 78 L 32 68 M 78 22 L 68 32" stroke="currentColor" strokeWidth="12" strokeLinecap="square"/>
         </svg>
       )},
       { id: 12, category: '文化・産業', name: '温泉', kana: 'おんせん', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <path d="M 15 80 C 15 65, 85 65, 85 80" fill="currentColor"/>
-          <path d="M 30 65 Q 20 40 30 15 M 50 65 Q 40 40 50 15 M 70 65 Q 60 40 70 15" stroke="currentColor" strokeWidth="8" fill="none" strokeLinecap="round"/>
+          <path d="M 15 80 C 15 65, 85 65, 85 80 Z" fill="currentColor"/>
+          <path d="M 30 65 Q 20 35 30 15 M 50 65 Q 40 35 50 15 M 70 65 Q 60 35 70 15" stroke="currentColor" strokeWidth="10" fill="none" strokeLinecap="round"/>
         </svg>
       )},
 
       // 【しぜん・土地】
       { id: 13, category: 'しぜん・土地', name: '田', kana: 'た', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <rect x="20" y="20" width="60" height="60" fill="none" stroke="currentColor" strokeWidth="8" strokeLinejoin="round"/>
-          <path d="M 50 20 L 50 80 M 20 50 L 80 50" stroke="currentColor" strokeWidth="8"/>
+          {/* 正しい「田」の記号：漢字の田ではなく、刈り取った稲の切り株（横１本、縦２本） */}
+          <path d="M 15 50 L 85 50 M 35 20 L 35 80 M 65 20 L 65 80" stroke="currentColor" strokeWidth="12" strokeLinecap="round"/>
         </svg>
       )},
       { id: 14, category: 'しぜん・土地', name: '畑', kana: 'はたけ', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <path d="M 25 35 L 50 75 L 75 35 M 40 15 L 50 35 L 60 15" stroke="currentColor" strokeWidth="8" strokeLinecap="round" fill="none" strokeLinejoin="round"/>
+          <path d="M 25 30 L 50 75 L 75 30" stroke="currentColor" strokeWidth="12" strokeLinecap="round" fill="none" strokeLinejoin="round"/>
         </svg>
       )},
       { id: 15, category: 'しぜん・土地', name: '果樹園', kana: 'かじゅえん', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <circle cx="50" cy="65" r="25" fill="none" stroke="currentColor" strokeWidth="8"/>
-          <path d="M 50 15 L 50 40 M 35 15 L 65 15" stroke="currentColor" strokeWidth="8" strokeLinecap="round"/>
+          {/* 丸いリンゴの実と、上の枝葉 */}
+          <circle cx="50" cy="65" r="25" fill="none" stroke="currentColor" strokeWidth="10"/>
+          <path d="M 50 40 L 50 15 M 30 25 L 50 35 L 70 25" stroke="currentColor" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
         </svg>
       )},
       { id: 16, category: 'しぜん・土地', name: '茶畑', kana: 'ちゃばたけ', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <circle cx="50" cy="25" r="10" fill="currentColor"/>
-          <circle cx="25" cy="65" r="10" fill="currentColor"/>
-          <circle cx="75" cy="65" r="10" fill="currentColor"/>
+          <circle cx="50" cy="30" r="12" fill="currentColor"/>
+          <circle cx="25" cy="70" r="12" fill="currentColor"/>
+          <circle cx="75" cy="70" r="12" fill="currentColor"/>
         </svg>
       )},
       { id: 17, category: 'しぜん・土地', name: '広葉樹林', kana: 'こうようじゅりん', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <path d="M 50 90 L 50 65 M 50 65 C 10 65, 10 15, 50 15 C 90 15, 90 65, 50 65" stroke="currentColor" strokeWidth="8" fill="none" strokeLinecap="round"/>
+          <path d="M 50 90 L 50 65 M 50 65 C 10 65, 10 15, 50 15 C 90 15, 90 65, 50 65" stroke="currentColor" strokeWidth="10" fill="none" strokeLinecap="round"/>
         </svg>
       )},
       { id: 18, category: 'しぜん・土地', name: '針葉樹林', kana: 'しんようじゅりん', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
-          <path d="M 50 15 L 50 85 M 50 30 L 15 75 M 50 30 L 85 75" stroke="currentColor" strokeWidth="10" strokeLinecap="round" fill="none" strokeLinejoin="round"/>
+          <path d="M 50 15 L 50 85 M 50 30 L 15 75 M 50 30 L 85 75" stroke="currentColor" strokeWidth="12" strokeLinecap="round" fill="none" strokeLinejoin="round"/>
         </svg>
       )},
     ];
