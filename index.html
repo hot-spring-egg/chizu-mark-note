@@ -35,6 +35,7 @@
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="icon" href="favicon.png">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&display=swap" rel="stylesheet">
   
@@ -113,7 +114,7 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // --- 資料に基づき精密に描画した全24種の地図記号 ---
+    // --- 資料に基づき精密に描画した全26種の地図記号 ---
     const CATEGORIES = ['役所・安全・くらし', '文化・産業', 'しぜん・土地'];
 
     const SYMBOL_DATA = [
@@ -244,6 +245,27 @@
       { id: 16, category: '文化・産業', name: '記念碑', kana: 'きねんひ', svg: (
         <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
           <path d="M 20 80 L 80 80 M 35 80 L 35 30 L 50 15 L 65 30 L 65 80" fill="none" stroke="currentColor" strokeWidth="10" strokeLinejoin="round" strokeLinecap="round"/>
+        </svg>
+      )},
+      // 新規追加
+      { id: 25, category: '文化・産業', name: '図書館', kana: 'としょかん', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <g fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" transform="rotate(-15 50 50)">
+            <path d="M 18,25 Q 34,12 50,22 Q 66,12 82,25 L 82,75 Q 66,62 50,72 Q 34,62 18,75 Z"></path>
+            <line x1="50" y1="22" x2="50" y2="72"></line>
+          </g>
+        </svg>
+      )},
+      // 新規追加
+      { id: 26, category: '文化・産業', name: '博物館', kana: 'はくぶつかん', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <g fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="butt" strokeLinejoin="miter">
+            <line x1="15" y1="46" x2="85" y2="46"></line>
+            <line x1="15" y1="78" x2="85" y2="78"></line>
+            <path d="M 25,78 L 25,46 L 50,22 L 75,46 L 75,78"></path>
+            <line x1="42" y1="46" x2="42" y2="78"></line>
+            <line x1="58" y1="46" x2="58" y2="78"></line>
+          </g>
         </svg>
       )},
 
