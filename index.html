@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>チズキゴウノート</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            terracotta: '#E07A5F',
+            sage: '#81B29A',
+            bluegrey: '#3D405B',
+            cream: '#F4F1DE',
+            mustard: '#F2CC8F',
+          },
+          fontFamily: {
+            rounded: ['"M PLUS Rounded 1c"', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      touch-action: manipulation;
+      user-select: none;
+      height: 100dvh;
+      width: 100vw;
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+    }
+    
+    #root {
+      height: 100%;
+      width: 100%;
+    }
+
+    /* コルクボード風背景 */
+    .bg-cork {
+      background-color: #d0a57b;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E");
+    }
+
+    /* 紙の質感背景 */
+    .bg-paper {
+      background-color: #F4F1DE;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    }
+
+    /* 画鋲（ピン）装飾 */
+    .pin {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, #fca5a5, #E07A5F);
+      box-shadow: 2px 3px 4px rgba(0,0,0,0.3), inset -1px -1px 3px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+    .pin::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background-color: rgba(255,255,255,0.6);
+    }
+    .pin-blue { background: radial-gradient(circle at 30% 30%, #93c5fd, #3D405B); }
+    .pin-yellow { background: radial-gradient(circle at 30% 30%, #fde047, #F2CC8F); }
+    .pin-green { background: radial-gradient(circle at 30% 30%, #a7f3d0, #81B29A); }
+
+    @keyframes openNote {
+      0% { transform: translateY(20px); opacity: 0; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    .animate-open-note { animation: openNote 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; }
+
+    @keyframes popIn {
+      0% { transform: scale(0.95); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop-in { animation: popIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // --- 外部画像を使わず、すべてSVGコードで緻密に描画された地図記号データ ---
+    const CATEGORIES = ['役所・安全・くらし', '文化・産業', 'しぜん・土地'];
+
+    const SYMBOL_DATA = [
+      // 【役所・安全・くらし】
+      { id: 1, category: '役所・安全・くらし', name: '市役所', kana: 'しやくしょ', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <circle cx="50" cy="50" r="32" fill="none" stroke="currentColor" strokeWidth="8"/>
+          <circle cx="50" cy="50" r="14" fill="currentColor"/>
+        </svg>
+      )},
+      { id: 2, category: '役所・安全・くらし', name: '町村役場', kana: 'ちょうそんやくば', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <circle cx="50" cy="50" r="28" fill="none" stroke="currentColor" strokeWidth="8"/>
+        </svg>
+      )},
+      { id: 3, category: '役所・安全・くらし', name: '交番', kana: 'こうばん', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <path d="M 25 25 L 75 75 M 75 25 L 25 75" stroke="currentColor" strokeWidth="12" strokeLinecap="round"/>
+        </svg>
+      )},
+      { id: 4, category: '役所・安全・くらし', name: '警察署', kana: 'けいさつしょ', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" strokeWidth="8"/>
+          <path d="M 30 30 L 70 70 M 70 30 L 30 70" stroke="currentColor" strokeWidth="8" strokeLinecap="round"/>
+        </svg>
+      )},
+      { id: 5, category: '役所・安全・くらし', name: '消防署', kana: 'しょうぼうしょ', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <path d="M 50 35 L 50 85 M 25 20 L 50 35 L 75 20" stroke="currentColor" strokeWidth="12" strokeLinecap="round" fill="none" strokeLinejoin="round"/>
+        </svg>
+      )},
+      { id: 6, category: '役所・安全・くらし', name: '郵便局', kana: 'ゆうびんきょく', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <path d="M 20 30 L 80 30 M 50 30 L 50 85 M 25 55 L 75 55" stroke="currentColor" strokeWidth="10" strokeLinecap="round"/>
+        </svg>
+      )},
+
+      // 【文化・産業】
+      { id: 7, category: '文化・産業', name: '小・中学校', kana: 'しょう・ちゅうがっこう', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <path d="M 20 35 L 80 35 M 50 15 L 50 35 M 40 35 L 15 85 M 60 35 L 85 85" stroke="currentColor" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      )},
+      { id: 8, category: '文化・産業', name: '病院', kana: 'びょういん', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <path d="M 20 15 L 80 15 L 80 60 C 80 85, 50 95, 50 95 C 50 95, 20 85, 20 60 Z" fill="none" stroke="currentColor" strokeWidth="8" strokeLinejoin="round"/>
+          <path d="M 50 35 L 50 65 M 35 50 L 65 50" stroke="currentColor" strokeWidth="8" strokeLinecap="round"/>
+        </svg>
+      )},
+      { id: 9, category: '文化・産業', name: '神社', kana: 'じんじゃ', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <path d="M 15 30 L 85 30 M 15 50 L 85 50 M 25 30 L 25 85 M 75 30 L 75 85 M 50 50 L 50 85 M 50 20 L 50 30" stroke="currentColor" strokeWidth="8" strokeLinecap="round"/>
+        </svg>
+      )},
+      { id: 10, category: '文化・産業', name: '寺院', kana: 'じいん', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <path d="M 50 15 L 50 85 M 15 50 L 85 50 M 15 15 L 50 15 M 85 85 L 50 85 M 85 15 L 85 50 M 15 85 L 15 50" stroke="currentColor" strokeWidth="8" strokeLinecap="round" fill="none"/>
+        </svg>
+      )},
+      { id: 11, category: '文化・産業', name: '工場', kana: 'こうじょう', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" strokeWidth="8"/>
+          <path d="M 50 10 L 50 25 M 50 75 L 50 90 M 10 50 L 25 50 M 75 50 L 90 50 M 22 22 L 32 32 M 78 78 L 68 68 M 22 78 L 32 68 M 78 22 L 68 32" stroke="currentColor" strokeWidth="8" strokeLinecap="round"/>
+        </svg>
+      )},
+      { id: 12, category: '文化・産業', name: '温泉', kana: 'おんせん', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <path d="M 15 80 C 15 65, 85 65, 85 80" fill="currentColor"/>
+          <path d="M 30 65 Q 20 40 30 15 M 50 65 Q 40 40 50 15 M 70 65 Q 60 40 70 15" stroke="currentColor" strokeWidth="8" fill="none" strokeLinecap="round"/>
+        </svg>
+      )},
+
+      // 【しぜん・土地】
+      { id: 13, category: 'しぜん・土地', name: '田', kana: 'た', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <rect x="20" y="20" width="60" height="60" fill="none" stroke="currentColor" strokeWidth="8" strokeLinejoin="round"/>
+          <path d="M 50 20 L 50 80 M 20 50 L 80 50" stroke="currentColor" strokeWidth="8"/>
+        </svg>
+      )},
+      { id: 14, category: 'しぜん・土地', name: '畑', kana: 'はたけ', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <path d="M 25 35 L 50 75 L 75 35 M 40 15 L 50 35 L 60 15" stroke="currentColor" strokeWidth="8" strokeLinecap="round" fill="none" strokeLinejoin="round"/>
+        </svg>
+      )},
+      { id: 15, category: 'しぜん・土地', name: '果樹園', kana: 'かじゅえん', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <circle cx="50" cy="65" r="25" fill="none" stroke="currentColor" strokeWidth="8"/>
+          <path d="M 50 15 L 50 40 M 35 15 L 65 15" stroke="currentColor" strokeWidth="8" strokeLinecap="round"/>
+        </svg>
+      )},
+      { id: 16, category: 'しぜん・土地', name: '茶畑', kana: 'ちゃばたけ', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <circle cx="50" cy="25" r="10" fill="currentColor"/>
+          <circle cx="25" cy="65" r="10" fill="currentColor"/>
+          <circle cx="75" cy="65" r="10" fill="currentColor"/>
+        </svg>
+      )},
+      { id: 17, category: 'しぜん・土地', name: '広葉樹林', kana: 'こうようじゅりん', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <path d="M 50 90 L 50 65 M 50 65 C 10 65, 10 15, 50 15 C 90 15, 90 65, 50 65" stroke="currentColor" strokeWidth="8" fill="none" strokeLinecap="round"/>
+        </svg>
+      )},
+      { id: 18, category: 'しぜん・土地', name: '針葉樹林', kana: 'しんようじゅりん', svg: (
+        <svg viewBox="0 0 100 100" className="w-full h-full text-bluegrey drop-shadow-md">
+          <path d="M 50 15 L 50 85 M 50 30 L 15 75 M 50 30 L 85 75" stroke="currentColor" strokeWidth="10" strokeLinecap="round" fill="none" strokeLinejoin="round"/>
+        </svg>
+      )},
+    ];
+
+    // --- カテゴリ選択用ノートコンポーネント ---
+    const CategoryNote = ({ category, onClick, isSelected, pinColorClass }) => {
+      return (
+        <div 
+          onClick={onClick}
+          className={`bg-white w-full h-24 sm:h-28 rounded-sm flex flex-col items-center justify-center relative cursor-pointer transition-all p-3 
+            ${isSelected 
+              ? 'border-4 border-terracotta transform -translate-y-1 shadow-lg ring-2 ring-terracotta/30' 
+              : 'border border-gray-100 shadow-md hover:-translate-y-1 hover:shadow-lg'}`}
+        >
+          {isSelected && (
+            <div className="absolute -top-3 -right-3 w-7 h-7 sm:w-8 sm:h-8 bg-terracotta text-white rounded-full flex items-center justify-center font-bold text-lg sm:text-xl shadow-md border-2 border-white z-20">
+              ✓
+            </div>
+          )}
+          <div className={`pin ${pinColorClass}`}></div>
+          <span className="font-rounded text-bluegrey font-bold text-center text-base sm:text-lg mt-2">
+            {category}
+          </span>
+        </div>
+      );
+    };
+
+    // --- メインアプリケーション ---
+    const App = () => {
+      // 全ての Hooks を関数の最上部に宣言
+      const [gameState, setGameState] = useState('TITLE'); // 'TITLE', 'SELECT', 'QUIZ', 'RESULT'
+      const [selectedCategories, setSelectedCategories] = useState([]);
+      const [questions, setQuestions] = useState([]);
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [score, setScore] = useState(0);
+      const [feedback, setFeedback] = useState(null);
+      const [options, setOptions] = useState([]);
+      const [hasMistaked, setHasMistaked] = useState(false);
+
+      // ポータルサイトへスコアを加算保存
+      const addScoreToLocal = () => {
+        try {
+          const currentScore = parseInt(localStorage.getItem('gogo_drill_score') || '0', 10);
+          localStorage.setItem('gogo_drill_score', currentScore + 1);
+        } catch(e) {
+          console.warn("localStorage not available");
+        }
+      };
+
+      const toggleCategory = (category) => {
+        setSelectedCategories(prev => 
+          prev.includes(category) 
+            ? prev.filter(c => c !== category) 
+            : [...prev, category]
+        );
+      };
+
+      const startGame = () => {
+        if (selectedCategories.length === 0) {
+          alert('しゅるいを 1つ以上 えらんでね！');
+          return;
+        }
+        
+        // 選択されたカテゴリの記号を抽出してシャッフル
+        let targetSymbols = SYMBOL_DATA.filter(s => selectedCategories.includes(s.category));
+        targetSymbols = targetSymbols.sort(() => 0.5 - Math.random());
+        
+        setQuestions(targetSymbols);
+        setCurrentIndex(0);
+        setScore(0);
+        setHasMistaked(false);
+        setFeedback(null);
+        setGameState('QUIZ');
+      };
+
+      // クイズ画面：選択肢の生成
+      useEffect(() => {
+        if (gameState === 'QUIZ' && questions.length > 0) {
+          const currentSymbol = questions[currentIndex];
+          
+          // 同じカテゴリの他の記号を優先的にダミーにする
+          const sameCategory = SYMBOL_DATA.filter(s => s.category === currentSymbol.category && s.id !== currentSymbol.id);
+          const others = SYMBOL_DATA.filter(s => s.category !== currentSymbol.category);
+          
+          let newOptions = sameCategory.sort(() => 0.5 - Math.random()).slice(0, 3);
+          
+          // ダミーが足りない場合は他カテゴリから補充
+          if (newOptions.length < 3) {
+            const extra = others.sort(() => 0.5 - Math.random()).slice(0, 3 - newOptions.length);
+            newOptions = [...newOptions, ...extra];
+          }
+          
+          newOptions.push(currentSymbol);
+          setOptions(newOptions.sort(() => 0.5 - Math.random()));
+        }
+      }, [gameState, currentIndex, questions]);
+
+      const handleAnswer = (opt) => {
+        if (feedback !== null) return; // 判定中は連打防止
+
+        const isCorrect = opt.id === questions[currentIndex].id;
+
+        if (isCorrect) {
+          setFeedback('⭕️');
+          if (!hasMistaked) {
+            setScore(s => s + 1);
+            addScoreToLocal(); // 1問正解ごとにポータルスコアを加算
+          }
+          
+          setTimeout(() => {
+            if (currentIndex + 1 < questions.length) {
+              setCurrentIndex(i => i + 1);
+              setHasMistaked(false);
+              setFeedback(null);
+            } else {
+              setGameState('RESULT');
+              setFeedback(null);
+            }
+          }, 1200);
+        } else {
+          setFeedback('❌');
+          setHasMistaked(true);
+          
+          setTimeout(() => {
+            setFeedback(null);
+          }, 1200);
+        }
+      };
+
+      const backToPortal = () => {
+        // ポータルサイトへ戻る（GitHub PagesのURLを想定）
+        window.location.href = 'https://hot-spring-egg.github.io/5sho-drill/';
+      };
+
+      // JSX レンダリング部
+      return (
+        <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden bg-cork">
+          
+          {/* ポータルへ戻るボタン */}
+          {(gameState === 'TITLE' || gameState === 'SELECT') && (
+            <button 
+              onClick={backToPortal}
+              className="absolute top-4 left-4 sm:top-6 sm:left-6 bg-white/90 text-bluegrey px-4 py-2 rounded-full font-bold shadow-sm hover:shadow-md transition-all z-40 border border-gray-200 text-sm sm:text-base"
+            >
+              ← ドリルにもどる
+            </button>
+          )}
+
+          {/* タイトル画面 */}
+          {gameState === 'TITLE' && (
+            <div className="w-full max-w-md mx-auto flex flex-col items-center justify-center p-4">
+              <div className="bg-paper px-8 py-8 rounded-sm shadow-md mb-12 transform -rotate-2 relative border border-white">
+                <div className="pin pin-yellow"></div>
+                <h1 className="font-rounded text-4xl sm:text-5xl font-bold text-bluegrey tracking-widest text-center mt-2 leading-tight">
+                  チズキゴウ<br/>ノート
+                </h1>
+                <p className="text-center text-sage font-bold mt-4 text-sm sm:text-base bg-white/80 py-1 px-4 rounded-full">
+                  よめるかな？ 地図記号クイズ
+                </p>
+              </div>
+              
+              <button 
+                onClick={() => setGameState('SELECT')}
+                className="w-full bg-terracotta text-white font-rounded py-4 rounded-full shadow-lg active:translate-y-1 active:shadow-md text-2xl font-bold transition-all border-4 border-white"
+              >
+                はじめる
+              </button>
+            </div>
+          )}
+
+          {/* カテゴリ選択画面 */}
+          {gameState === 'SELECT' && (
+            <div className="w-full h-full flex flex-col items-center relative py-6">
+              <div className="w-full max-w-4xl mx-auto flex flex-col items-center mb-4 bg-paper/90 p-4 rounded-lg shadow-sm border border-white">
+                <h2 className="font-rounded text-xl sm:text-2xl font-bold text-bluegrey">
+                  どの しゅるい に チャレンジする？
+                </h2>
+                <p className="text-sm text-gray-500 mt-1">（いくつでも えらべるよ）</p>
+              </div>
+
+              <div className="w-full max-w-3xl flex justify-end gap-4 px-4 mb-2">
+                <button onClick={() => setSelectedCategories([...CATEGORIES])} className="font-rounded text-sm font-bold text-sage underline">全部えらぶ</button>
+                <button onClick={() => setSelectedCategories([])} className="font-rounded text-sm font-bold text-terracotta underline">全部けす</button>
+              </div>
+
+              <div className="w-full flex-1 overflow-y-auto px-4 pb-32">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 w-full max-w-3xl mx-auto">
+                  {CATEGORIES.map((category, index) => (
+                    <CategoryNote 
+                      key={category} 
+                      category={category} 
+                      isSelected={selectedCategories.includes(category)}
+                      onClick={() => toggleCategory(category)}
+                      pinColorClass={['pin-blue', 'pin-green', 'pin-yellow'][index % 3]}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {selectedCategories.length > 0 && (
+                <div className="absolute bottom-6 w-full flex justify-center animate-open-note z-10 px-4 pointer-events-none">
+                  <button 
+                    onClick={startGame}
+                    className="bg-sage text-white font-rounded py-3 sm:py-4 px-10 rounded-full shadow-lg active:translate-y-1 active:shadow-md text-xl font-bold transition-all border-4 border-white w-full max-w-sm pointer-events-auto"
+                  >
+                    クイズを スタート！
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* クイズ画面 */}
+          {gameState === 'QUIZ' && questions.length > 0 && (
+            <div className="w-full h-full flex flex-col p-2 sm:p-4 relative">
+              <div className="w-full max-w-3xl mx-auto flex-1 flex flex-col items-center bg-paper rounded-sm shadow-xl p-3 sm:p-6 overflow-hidden relative animate-open-note border border-white">
+                
+                {/* ヘッダー情報 */}
+                <div className="w-full flex justify-between items-center font-rounded text-sm sm:text-base text-bluegrey/70 mb-4 px-2">
+                  <button 
+                    onClick={() => setGameState('SELECT')} 
+                    className="underline hover:text-bluegrey bg-white/50 px-3 py-1 rounded-full"
+                    disabled={feedback !== null}
+                  >
+                    ← やめる
+                  </button>
+                  <div className="flex gap-3 font-bold">
+                    <span className="bg-white px-3 py-1 rounded-full shadow-sm border border-gray-100">
+                      {currentIndex + 1} / {questions.length} 問
+                    </span>
+                    <span className="bg-white px-3 py-1 rounded-full shadow-sm text-terracotta border border-gray-100">
+                      スコア: {score}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 問題（SVG）表示エリア */}
+                <div className="w-full aspect-square max-h-[40vh] sm:max-h-[50vh] bg-white rounded-xl border-4 border-sage shadow-inner flex flex-col items-center justify-center p-8 relative shrink-0">
+                   <div className="absolute top-3 left-3 w-4 h-4 rounded-full bg-gray-200 shadow-inner"></div>
+                   <div className="absolute top-3 right-3 w-4 h-4 rounded-full bg-gray-200 shadow-inner"></div>
+                   <div className="absolute bottom-3 left-3 w-4 h-4 rounded-full bg-gray-200 shadow-inner"></div>
+                   <div className="absolute bottom-3 right-3 w-4 h-4 rounded-full bg-gray-200 shadow-inner"></div>
+                   
+                   <div className="w-3/4 h-3/4 max-w-[200px] max-h-[200px]">
+                      {questions[currentIndex].svg}
+                   </div>
+                </div>
+
+                <div className="text-center my-4 shrink-0 z-10">
+                  <p className="text-base sm:text-xl font-bold text-bluegrey bg-white/80 backdrop-blur-sm px-6 py-2 rounded-full shadow-sm border border-gray-100">
+                    この 地図記号は なあに？
+                  </p>
+                </div>
+
+                {/* 4択ボタンエリア */}
+                <div className="grid grid-cols-2 gap-3 w-full max-w-md mt-auto pb-4 px-2 z-10">
+                  {options.map(opt => (
+                    <button 
+                      key={opt.id}
+                      onClick={() => handleAnswer(opt)}
+                      disabled={feedback !== null}
+                      className="bg-white border-b-4 border-mustard text-bluegrey font-rounded py-3 sm:py-4 rounded-lg shadow-md hover:bg-mustard/10 active:translate-y-1 active:border-b-0 transition-all font-bold flex flex-col items-center justify-center"
+                    >
+                      <span className="text-[10px] sm:text-xs text-gray-500 font-normal mb-0.5">{opt.kana}</span>
+                      <span className="text-lg sm:text-2xl leading-none">{opt.name}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* ⭕️❌フィードバック */}
+                {feedback && (
+                  <div className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none bg-white/40 backdrop-blur-sm">
+                    <span className={`text-[12rem] drop-shadow-2xl font-bold ${feedback === '⭕️' ? 'text-sage' : 'text-terracotta'} animate-pop-in`}>
+                      {feedback}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 結果画面 */}
+          {gameState === 'RESULT' && (
+            <div className="w-full h-full flex flex-col p-4 sm:p-8 relative">
+              <div className="w-full max-w-xl mx-auto flex-1 flex flex-col items-center justify-center bg-paper rounded-sm shadow-xl p-6 relative animate-open-note border border-white">
+                <div className="pin pin-blue"></div>
+                
+                <h2 className="font-rounded text-3xl sm:text-4xl font-bold mb-6 text-bluegrey border-b-2 border-sage pb-2 mt-4">
+                  けっか はっぴょう
+                </h2>
+                
+                <p className="text-[6rem] sm:text-[8rem] font-bold text-terracotta mb-4 leading-none drop-shadow-sm">
+                  {score} <span className="text-2xl sm:text-4xl text-bluegrey">てん</span>
+                </p>
+                
+                <p className="font-rounded text-lg sm:text-xl mb-12 text-sage font-bold bg-white px-6 py-2 rounded-full shadow-sm">
+                  {score === questions.length ? 'パーフェクト！ すごいぞ！' : 'よく がんばったね！'}
+                </p>
+                
+                <div className="flex flex-col sm:flex-row gap-4 w-full">
+                  <button 
+                    onClick={() => setGameState('SELECT')}
+                    className="flex-1 bg-sage text-white font-rounded py-4 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-xl font-bold transition-all border-2 border-white"
+                  >
+                    しゅるいを えらぶ
+                  </button>
+                  <button 
+                    onClick={backToPortal}
+                    className="flex-1 bg-bluegrey text-white font-rounded py-4 rounded-full shadow-md active:translate-y-1 active:shadow-sm text-xl font-bold transition-all border-2 border-white"
+                  >
+                    ドリルに もどる
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
